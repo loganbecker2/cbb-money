@@ -54,7 +54,7 @@ def scrape_seasons(base_url, seasons):
 #%% Create function to get each teams wins and losses data
 def scrape_team_gamelog(base_url, seasons):
     all_data = pd.DataFrame()
-    
+
     for season in seasons:
         schools = getSchoolList(season)
         for school in schools:
@@ -75,9 +75,12 @@ def scrape_team_gamelog(base_url, seasons):
 #%% Cleaning and preparing gamelog dataframe function    
 def clean_gamelogs(df):    
     # delete index columns
-    if 'Unnamed: 0' in df and 'Rk' in df and 'Gtm' in df:
-        df = df.drop(['Unnamed: 0','Rk','Gtm'], axis = 1)
-    
+    if 'Unnamed: 0' in df:
+        df = df.drop('Unnamed: 0', axis = 1)
+    if 'Rk' in df:
+        df = df.drop('Rk', axis = 1)
+    if 'Gtm' in df:
+        df = df.drop('Gtm', axis = 1)
     # Delete date column
     if 'Date' in df:
         df = df.drop('Date', axis = 1)
@@ -85,16 +88,25 @@ def clean_gamelogs(df):
     # change name of home or away column     Rename Reslt to Result     Tm to TeamPts     Opp to AwayPts
     df = df.rename(columns= {'Unnamed: 3': 'Location', 'Rslt': 'Result', 'Tm': 'TeamPts', 'Opp.1': 'AwayPts'})
     # change name of team and opponent stats
-    df = df.rename(columns= {'FG': 'Team_FG', 'FGA': 'Team_FGA', 'FG%': 'Team_FG%', '3P': 'Team_3P', '3PA': 'Team_3PA',
-                             '3P%': 'Team_3P%', '2P': 'Team_2P', '2PA': 'Team_2PA', '2P%': 'Team_2P%', 'eFG%': 'Team_eFG%',
-                             'FT': 'Team_FT', 'FTA': 'Team_FTA', 'FT%': 'Team_FT%', 'ORB': 'Team_ORB', 'DRB': 'Team_DRB', 
-                             'TRB': 'Team_TRB', 'AST': 'Team_AST', 'STL': 'Team_STL', 'BLK': 'Team_BLK', 'TOV': 'Team_TOV',
-                             'PF': 'Team_PF'})
-    df = df.rename(columns= {'FG.1': 'Away_FG', 'FGA.1': 'Away_FGA', 'FG%.1': 'Away_FG%', '3P.1': 'Away_3P', '3PA.1': 'Away_3PA',
-                             '3P%.1': 'Away_3P%', '2P.1': 'Away_2P', '2PA.1': 'Away_2PA', '2P%.1': 'Away_2P%', 'eFG%.1': 'Away_eFG%',
-                             'FT.1': 'Away_FT', 'FTA.1': 'Away_FTA', 'FT%.1': 'Away_FT%', 'ORB.1': 'Away_ORB', 'DRB.1': 'Away_DRB', 
-                             'TRB.1': 'Away_TRB', 'AST.1': 'Away_AST', 'STL.1': 'Away_STL', 'BLK.1': 'Away_BLK', 'TOV.1': 'Away_TOV',
-                             'PF.1': 'Away_PF'})
+    df = df.rename(columns={
+    # Team stats
+    'FG': 'Team_FG', 'FGA': 'Team_FGA', 'FG%': 'Team_FG_Percentage',
+    '3P': 'Team_ThreeP', '3PA': 'Team_ThreePA', '3P%': 'Team_ThreeP_Percentage',
+    '2P': 'Team_TwoP', '2PA': 'Team_TwoPA', '2P%': 'Team_TwoP_Percentage',
+    'eFG%': 'Team_eFG_Percentage', 'FT': 'Team_FT', 'FTA': 'Team_FTA',
+    'FT%': 'Team_FT_Percentage', 'ORB': 'Team_ORB', 'DRB': 'Team_DRB',
+    'TRB': 'Team_TRB', 'AST': 'Team_AST', 'STL': 'Team_STL', 'BLK': 'Team_BLK',
+    'TOV': 'Team_TOV', 'PF': 'Team_PF',
+    # Away stats
+    'FG.1': 'Away_FG', 'FGA.1': 'Away_FGA', 'FG%.1': 'Away_FG_Percentage',
+    '3P.1': 'Away_ThreeP', '3PA.1': 'Away_ThreePA', '3P%.1': 'Away_ThreeP_Percentage',
+    '2P.1': 'Away_TwoP', '2PA.1': 'Away_TwoPA', '2P%.1': 'Away_TwoP_Percentage',
+    'eFG%.1': 'Away_eFG_Percentage', 'FT.1': 'Away_FT', 'FTA.1': 'Away_FTA',
+    'FT%.1': 'Away_FT_Percentage', 'ORB.1': 'Away_ORB', 'DRB.1': 'Away_DRB',
+    'TRB.1': 'Away_TRB', 'AST.1': 'Away_AST', 'STL.1': 'Away_STL',
+    'BLK.1': 'Away_BLK', 'TOV.1': 'Away_TOV', 'PF.1': 'Away_PF'
+    })
+
     
     # change the values in the column
     df['Location'] = df['Location'].fillna('Home')
@@ -233,6 +245,13 @@ def format_school_name(school):
     school = school.lower()
     return school
 
+
+#%% save into mysql database
+def toSQL(df, databaseName):
+    engine = create_engine('mysql+mysqlconnector://logmo:Logmonster02!@127.0.0.1/cbb_data')
+    return df.to_sql(name=databaseName, con=engine, if_exists='append', index=False)
+
+
 #%% Scrape overall cbb data
 cbb_data = scrape_seasons(base_url, seasons)
 
@@ -248,13 +267,10 @@ print("Finished scraping and creating season stats dataframes.")
 all_teams_logs = scrape_team_gamelog(base_url, seasons)
 
 # Save all team gamelogs for all seasons combined into one CSV
-all_teams_logs.to_csv('C:/Users/Logmo/cbb-money/DataFrames/Team-Gamelogs/all_team_gamelogs.csv', index=False)
-  
+###all_teams_logs.to_csv('C:/Users/Logmo/cbb-money/DataFrames/Team-Gamelogs/all_team_gamelogs.csv', index=False)
+
+# Save into mysql
+print(f"Rows affected: {toSQL(all_teams_logs, 'gamelogs')}")
+
 print("Finished scraping and creating dataframes for all team gamelogs.")
-
-
-#%% save into mysql database
-def toSQL(df, databaseName):
-    engine = create_engine('mysql+mysqlconnector://logmo:Logmonster02!@127.0.0.1/cbb_data')
-    return df.to_sql(name=databaseName, con=engine, if_exists='append', index=False)
     
