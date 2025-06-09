@@ -109,9 +109,11 @@ def clean_gamelogs(df):
     df.loc[df['Type'].str.contains('CTOURN',na = False), 'Type'] = 'CTOURN' #PLACEHOLDER if we want to change it later
     
     # Change values in OT column so we don't have null values
-    df['OT'] = df['OT'].fillna(0)
     df.loc[df['OT'].str.contains('OT', na = False), 'OT'] = 1
-    df['OT'] = df['OT'].astype(int)
+    # Because fillna downcasting is being depreciated this is correct ig
+    df['OT'] = pd.to_numeric(df['OT'], errors='coerce')
+    df['OT'] = df['OT'].fillna(0).astype(int)
+
     
     # Delete extra rows with column names
     df = df[df['Opp'] != 'Opp']
@@ -246,19 +248,13 @@ all_teams_logs = scrape_team_gamelog(base_url, seasons)
 # Get data frames for each season
 df_list = []
 for season in seasons:
-    schools = getSchoolList(season)
-    for school in schools:
+   schools = getSchoolList(season)
+   for school in schools:
         season_df = all_teams_logs[all_teams_logs['Season'] == season]
         school_df = season_df[season_df['School'] == school]
         # Save to csv
         school_df.to_csv(f'C:/Users/Logmo/cbb-money/DataFrames/Team-Gamelogs/{season}/{school}-gamelogs.csv')
-    print(f'Done saving season {season} to csv.')
+   print(f'Done saving season {season} to csv.')
         
 print("Finished scraping and creating dataframes for all team gamelogs.")
-
-
-
-
-
-
 
