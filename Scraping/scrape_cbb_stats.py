@@ -8,6 +8,7 @@ Created on Mon Dec 30 16:24:07 2024
 import pandas as pd
 import time
 import random
+from sqlalchemy import create_engine
 
 
 #%% RUN FIRST
@@ -40,7 +41,7 @@ def scrape_seasons(base_url, seasons):
         url = f"{base_url}/seasons/{season}-school-stats.html"
         df = scrape_cbb(url)
         df = cleanSeasonData(df)
-        
+
         if df is not None:
             df['Season'] = season
             all_data = pd.concat([all_data, df], ignore_index=True)
@@ -76,9 +77,6 @@ def clean_gamelogs(df):
     # delete index columns
     if 'Unnamed: 0' in df and 'Rk' in df and 'Gtm' in df:
         df = df.drop(['Unnamed: 0','Rk','Gtm'], axis = 1)
-    # Delete season and school columns if you want (ill leave commented out)
-    # if 'Season' in df and 'School' in df:
-    #     df = df.drop(['Season', 'School'], axis = 1)
     
     # Delete date column
     if 'Date' in df:
@@ -109,10 +107,13 @@ def clean_gamelogs(df):
     df.loc[df['Type'].str.contains('CTOURN',na = False), 'Type'] = 'CTOURN' #PLACEHOLDER if we want to change it later
     
     # Change values in OT column so we don't have null values
-    df.loc[df['OT'].str.contains('OT', na = False), 'OT'] = 1
-    # Because fillna downcasting is being depreciated this is correct ig
-    df['OT'] = pd.to_numeric(df['OT'], errors='coerce')
-    df['OT'] = df['OT'].fillna(0).astype(int)
+    if df['OT'].isnull().all(): # If column is all nulls, just fill with 0
+        df['OT'] = 0
+    else:
+        df['OT'] = df['OT'].astype(str)
+        df.loc[df['OT'].str.contains('OT', na=False), 'OT'] = 1
+        df['OT'] = pd.to_numeric(df['OT'], errors='coerce').fillna(0).astype(int)
+
 
     
     # Delete extra rows with column names
@@ -125,17 +126,30 @@ def clean_gamelogs(df):
 
 #%% Cleaning and preparing season dataframe function
 def cleanSeasonData(df):
-    # Need to drop rows with no team name still (hi past self, I am still unsure why there are team names missing in gamelogs ill look another time)
-    
     # Drop 'unnamed' columns
     df = df.loc[:, ~df.columns.str.startswith('Unnamed')] # IDK if this is working tbh
-    # Rename wins and losses columns
-    df = df.rename(columns={'W': 'W_Tot', 'L': 'L_Tot','W.1': 'W_Conf', 'L.1': 'L_Conf', 'W.2': 'W_Home', 'L.2': 'L_Home', 'W.3': 'W_Away', 'L.3': 'L_Away'})    
-    # Rename points columns
-    df = df.rename(columns={'Tm.': 'Tm_Pts', 'Opp.': 'Opp_Pts'})
-    # Rename SRS and SOS for clarity
-    df = df.rename(columns={'SRS': 'Simple_Rating_System', 'SOS': 'Stregnth_Of_Schedule'})
-
+    
+    df = df.rename(columns={
+        'W': 'W_Tot',
+        'L': 'L_Tot',
+        'W.1': 'W_Conf',
+        'L.1': 'L_Conf',
+        'W.2': 'W_Home',
+        'L.2': 'L_Home',
+        'W.3': 'W_Away',
+        'L.3': 'L_Away',
+        'Tm.': 'Tm_Pts',
+        'Opp.': 'Opp_Pts',
+        'SRS': 'Simple_Rating_System',
+        'SOS': 'Strength_Of_Schedule',
+        'W-L%': 'W_L_Percentage',
+        'FG%': 'FG_Percentage',
+        '3P': 'ThreeP',
+        '3PA': 'ThreePA',
+        '3P%': 'ThreeP_Percentage',
+        'FT%': 'FT_Percentage'
+    })
+    
     # Delete first unnamed column (just an index column)
     if 'Unnamed: 0' in df.columns:
         df = df.drop('Unnamed: 0', axis = 1)   
@@ -143,17 +157,11 @@ def cleanSeasonData(df):
     if 'Rk' in df.columns:    
         df = df.drop('Rk', axis = 1)
     
-    # Delete Season column as file organization shows years
-    # (ILL LEAVE COMMENTED OUT DOESNT MATTER TOO MUCH IF SEASON COLUMN IS THERE OR NOT TBH)
-    # if 'Season' in df.columns:
-    #     df = df.drop('Season', axis = 1) # I act like its hard to drop column if we want to later xD
-    
     # Delete extra rows with column names
     df = df.dropna(subset='School') # Drop category row that is iterated
     df = df[df['School'] != 'School'] # Drop second reiterated column row with Rk value in Rk column
     
     return df
-
 #%% Function to get list of all schools
 def getSchoolList(season): # urlNeeeded is for when you need the school names to be changed for the url
     url = f'https://www.sports-reference.com/cbb/seasons/men/{season}-school-stats.html'
@@ -228,33 +236,25 @@ def format_school_name(school):
 #%% Scrape overall cbb data
 cbb_data = scrape_seasons(base_url, seasons)
 
-## Get data frames for each season
-df_list = []
-# MAKE SURE YOUR DIRECTORY IS SET CORRECTLY IN ORDER TO SAVE THE CSV IN THE CORRECT PLACE
-for season in seasons:
-    season_df = cbb_data[cbb_data['Season'] == season]
-    
-    # Reset index for each season
-    season_df.reset_index(drop=True, inplace=True)
-    
-    # Save to csv (could save to variable here but think its redundant)
-    season_df.to_csv(f'C:/Users/Logmo/cbb-money/DataFrames/Overall-Data/{season}_stats.csv')
+# Save all seasons combined in one CSV
+###cbb_data.to_csv('C:/Users/Logmo/cbb-money/DataFrames/Overall-Data/season_stats.csv', index=False)
 
-print("Finished scraping and creating overall data dataframes.")
+# Save into mysql
+print(f"Rows affected: {toSQL(cbb_data, 'season_stats')}")
+
+print("Finished scraping and creating season stats dataframes.")
 
 #%% Scrape team game logs (WILL TAKE 3+ HOURS) UNCOMMENT WHEN NEEDING TO RUN
 all_teams_logs = scrape_team_gamelog(base_url, seasons)
 
-# Get data frames for each season
-df_list = []
-for season in seasons:
-   schools = getSchoolList(season)
-   for school in schools:
-        season_df = all_teams_logs[all_teams_logs['Season'] == season]
-        school_df = season_df[season_df['School'] == school]
-        # Save to csv
-        school_df.to_csv(f'C:/Users/Logmo/cbb-money/DataFrames/Team-Gamelogs/{season}/{school}-gamelogs.csv')
-   print(f'Done saving season {season} to csv.')
-        
+# Save all team gamelogs for all seasons combined into one CSV
+all_teams_logs.to_csv('C:/Users/Logmo/cbb-money/DataFrames/Team-Gamelogs/all_team_gamelogs.csv', index=False)
+  
 print("Finished scraping and creating dataframes for all team gamelogs.")
 
+
+#%% save into mysql database
+def toSQL(df, databaseName):
+    engine = create_engine('mysql+mysqlconnector://logmo:Logmonster02!@127.0.0.1/cbb_data')
+    return df.to_sql(name=databaseName, con=engine, if_exists='append', index=False)
+    
