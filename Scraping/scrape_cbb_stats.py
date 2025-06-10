@@ -8,8 +8,9 @@ Created on Mon Dec 30 16:24:07 2024
 import pandas as pd
 import time
 import random
+import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
-import dbConn.py
 
 
 #%% RUN FIRST
@@ -217,7 +218,7 @@ def format_school_name(school):
     school = school.replace('iu indy','iupui')
     school = school.replace('kansas city', 'missouri-kansas-city')
     school = school.replace('little rock','arkansas little-rock')
-    school = school.replace('louisiana','louisiana-lafayette')
+    school = school.replace('louisiana state','louisiana-lafayette')
     school = school.replace('nc state','north-carolina-state')
     school = school.replace('omaha','nebraska-omaha')
     school = school.replace('purdue fort wayne','ipfw')
@@ -246,6 +247,13 @@ def format_school_name(school):
     school = school.replace(' ', '-')
     return school
 
+#%% save into mysql database
+def toSQL(df, databaseName):
+    # Load .env file
+    load_dotenv()
+    
+    engine = create_engine(f'mysql+mysqlconnector://{os.getenv("DB_USER")}:{os.getenv("DB_PASSWORD")}@127.0.0.1/{os.getenv("DB_NAME")}')
+    return df.to_sql(name=databaseName, con=engine, if_exists='append', index=False)
 
 #%% Scrape overall cbb data
 cbb_data = scrape_seasons(base_url, seasons)
