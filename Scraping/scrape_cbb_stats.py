@@ -9,6 +9,7 @@ import pandas as pd
 import time
 import random
 from sqlalchemy import create_engine
+import dbConn.py
 
 
 #%% RUN FIRST
@@ -200,56 +201,50 @@ def getSchoolList(season): # urlNeeeded is for when you need the school names to
 
 #%% Function to format school names for the url
 def format_school_name(school):
+    school = school.lower()
     # Past seasons have ncaa in them for some teams
-    school = school.replace('\xa0NCAA','')
+    school = school.replace('\xa0ncaa','')
     school = school.replace('(','')
     school = school.replace(')','')
-    school = school.replace(' ', '-')
     school = school.replace('&','')
     school = school.replace("'","")
     school = school.replace('.','')
     
     # Random school changes in their url
-    school = school.replace('east-texas-am', 'texas-am-commerce')
+    school = school.replace('east texas am', 'texas-am-commerce')
     school = school.replace('fdu','fairleigh-dickinson')
-    school = school.replace('houston-christian','houston-baptist')
-    school = school.replace('iu-indy','iupui')
-    school = school.replace('kansas-city', 'missouri-kansas-city')
-    school = school.replace('little-rock','arkansas-little-rock')
+    school = school.replace('houston christian','houston-baptist')
+    school = school.replace('iu indy','iupui')
+    school = school.replace('kansas city', 'missouri-kansas-city')
+    school = school.replace('little rock','arkansas little-rock')
     school = school.replace('louisiana','louisiana-lafayette')
-    school = school.replace('nc-state','north-carolina-state')
+    school = school.replace('nc state','north-carolina-state')
     school = school.replace('omaha','nebraska-omaha')
-    school = school.replace('purdue-fort-wayne','ipfw')
-    school = school.replace('sam-houston','sam-houston-state')
-    school = school.replace('siu-edwardsville','southern-illinois-edwardsville')
-    school = school.replace('st-thomas','st-thomas-mn')
+    school = school.replace('purdue fort wayne','ipfw')
+    school = school.replace('sam houston','sam-houston-state')
+    school = school.replace('siu edwardsville','southern-illinois-edwardsville')
+    school = school.replace('st thomas','st-thomas-mn')
     school = school.replace('tcu','texas-christian')
-    school = school.replace('texas-rio-grande-valley','texas-pan-american')
-    school = school.replace('the-citadel','citadel')
+    school = school.replace('texas rio grande valley','texas-pan-american')
+    school = school.replace('the citadel','citadel')
     school = school.replace('uab','alabama-birmingham')
-    school = school.replace('uc-davis','california-davis')
-    school = school.replace('uc-irvine','california-irvine')
-    school = school.replace('uc-riverside','california-riverside')
-    school = school.replace('uc-san-diego','california-san-diego')
-    school = school.replace('uc-santa-barbara','california-santa-barbara')
+    school = school.replace('uc davis','california-davis')
+    school = school.replace('uc irvine','california-irvine')
+    school = school.replace('uc riverside','california-riverside')
+    school = school.replace('uc san diego','california-san-diego')
+    school = school.replace('uc santa barbara','california-santa-barbara')
     school = school.replace('ucf','central-florida')
-    school = school.replace('unc-asheville','north-carolina-asheville')
-    school = school.replace('unc-greensboro','north-carolina-greensboro')
-    school = school.replace('unc-wilmington','north-carolina-wilmington')
-    school = school.replace('ut-arlington','texas-arlington')
-    school = school.replace('utah-tech','dixie-state')
+    school = school.replace('unc asheville','north-carolina-asheville')
+    school = school.replace('unc greensboro','north-carolina-greensboro')
+    school = school.replace('unc wilmington','north-carolina-wilmington')
+    school = school.replace('ut arlington','texas-arlington')
+    school = school.replace('utah tech','dixie-state')
     school = school.replace('utep','texas-el-paso')
     school = school.replace('utsa','texas-san-antonio')
     school = school.replace('vmi','virginia-military-institute')
-    school = school.replace('william--mary','william-mary')
-    school = school.lower()
+    school = school.replace('william-mary','william-mary')
+    school = school.replace(' ', '-')
     return school
-
-
-#%% save into mysql database
-def toSQL(df, databaseName):
-    engine = create_engine('mysql+mysqlconnector://logmo:Logmonster02!@127.0.0.1/cbb_data')
-    return df.to_sql(name=databaseName, con=engine, if_exists='append', index=False)
 
 
 #%% Scrape overall cbb data

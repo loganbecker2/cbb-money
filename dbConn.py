@@ -29,3 +29,9 @@ print("Connected to database:", current_db)
 # Clean up
 cursor.close()
 conn.close()
+
+
+#%% save into mysql database
+def toSQL(df, databaseName):
+    engine = create_engine('mysql+mysqlconnector://logmo:Logmonster02!@127.0.0.1/cbb_data')
+    return df.to_sql(name=databaseName, con=engine, if_exists='append', index=False)
