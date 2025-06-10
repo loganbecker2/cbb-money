@@ -13,8 +13,8 @@ import MySQLdb
 # Connect to the MySQL database
 conn = MySQLdb.connect(
     host="localhost",
-    user="logmo",
-    password="Logmonster02!",
+    user="user",
+    password="pass",
     database="cbb_data"
 )
 
@@ -33,5 +33,5 @@ conn.close()
 
 #%% save into mysql database
 def toSQL(df, databaseName):
-    engine = create_engine('mysql+mysqlconnector://logmo:Logmonster02!@127.0.0.1/cbb_data')
+    engine = create_engine('mysql+mysqlconnector://user:pass@127.0.0.1/cbb_data')
     return df.to_sql(name=databaseName, con=engine, if_exists='append', index=False)
