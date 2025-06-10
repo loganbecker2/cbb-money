@@ -218,7 +218,8 @@ def format_school_name(school):
     school = school.replace('iu indy','iupui')
     school = school.replace('kansas city', 'missouri-kansas-city')
     school = school.replace('little rock','arkansas little-rock')
-    school = school.replace('louisiana state','louisiana-lafayette')
+    if school == 'louisiana':
+        school = school.replace('louisiana','louisiana-lafayette')
     school = school.replace('nc state','north-carolina-state')
     school = school.replace('omaha','nebraska-omaha')
     school = school.replace('purdue fort wayne','ipfw')
@@ -253,7 +254,7 @@ def toSQL(df, databaseName):
     # Load .env file
     load_dotenv()
     
-    engine = create_engine(f'mysql+mysqlconnector://{os.getenv("DB_USER")}:{os.getenv("DB_PASSWORD")}@127.0.0.1/{os.getenv("DB_NAME")}')
+    engine = create_engine(f'mysql+mysqlconnector://{os.getenv("DB_USER")}:{os.getenv("DB_PASSWORD")}@{os.getenv("DB_HOST")}/{databaseName}')
     return df.to_sql(name=databaseName, con=engine, if_exists='append', index=False)
 
 #%% Scrape overall cbb data
