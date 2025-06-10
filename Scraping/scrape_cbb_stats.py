@@ -245,6 +245,7 @@ def format_school_name(school):
     school = school.replace('vmi','virginia-military-institute')
     school = school.replace('william-mary','william-mary')
     school = school.replace(' ', '-')
+    
     return school
 
 #%% save into mysql database
